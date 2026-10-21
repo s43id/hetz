@@ -1,0 +1,1438 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hetzner Manager</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root {
+  --bg: var(--tg-theme-secondary-bg-color, #f2f2f7);
+  --surface: var(--tg-theme-section-bg-color, var(--tg-theme-bg-color, #ffffff));
+  --text: var(--tg-theme-text-color, #111114);
+  --muted: var(--tg-theme-subtitle-text-color, var(--tg-theme-hint-color, #8a8a93));
+  --hint: var(--tg-theme-hint-color, #8a8a93);
+  --accent: var(--tg-theme-button-color, #2f7cf6);
+  --accent-text: var(--tg-theme-button-text-color, #ffffff);
+  --link: var(--tg-theme-link-color, var(--accent));
+  --header: var(--tg-theme-section-header-text-color, var(--muted));
+  --danger: var(--tg-theme-destructive-text-color, #e5484d);
+  --ok: #30a46c; --warn: #f5a524; --orange: #f76b15;
+  --line: color-mix(in srgb, var(--text) 9%, transparent);
+  --tint: color-mix(in srgb, var(--accent) 13%, transparent);
+  --radius: 16px;
+  --shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.04);
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; background: var(--bg); color: var(--text);
+  font: 15px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased; }
+body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+button, input, select { font: inherit; color: inherit; }
+.mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 13px; }
+.muted { color: var(--muted); } .small { font-size: 13px; } .tiny { font-size: 12px; }
+.grow { flex: 1; min-width: 0; } .nowrap { white-space: nowrap; }
+.ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row { display: flex; align-items: center; gap: 10px; }
+.spacer { height: 8px; }
+
+/* header */
+header { position: sticky; top: 0; z-index: 10; display: flex; align-items: flex-end; gap: 10px;
+  padding: 14px 16px 10px; background: color-mix(in srgb, var(--bg) 86%, transparent);
+  backdrop-filter: saturate(180%) blur(14px); -webkit-backdrop-filter: saturate(180%) blur(14px); }
+header .titles { flex: 1; min-width: 0; }
+header h1 { margin: 0; font-size: 26px; font-weight: 750; letter-spacing: -.02em; line-height: 1.15;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+header .sub { color: var(--muted); font-size: 13px; min-height: 18px; }
+.iconbtn { width: 36px; height: 36px; border-radius: 50%; border: 0; display: grid; place-items: center;
+  background: var(--surface); color: var(--accent); box-shadow: var(--shadow); cursor: pointer; flex: none; }
+.iconbtn svg { width: 18px; height: 18px; }
+main { padding: 4px 16px 16px; max-width: 760px; margin: 0 auto; }
+
+/* tab bar */
+nav#tabs { position: fixed; bottom: 0; inset-inline: 0; z-index: 10; display: flex; padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--surface) 88%, transparent); border-top: 1px solid var(--line);
+  backdrop-filter: saturate(180%) blur(16px); -webkit-backdrop-filter: saturate(180%) blur(16px); }
+nav#tabs button { flex: 1; border: 0; background: none; color: var(--hint); padding: 4px 0; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 11px; font-weight: 600; }
+nav#tabs button svg { width: 24px; height: 24px; }
+nav#tabs button.on { color: var(--accent); }
+
+/* sections + rows */
+.section { margin: 18px 0 0; }
+.section > .head { display: flex; align-items: baseline; justify-content: space-between; padding: 0 4px 6px;
+  color: var(--header); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.section > .head a { text-transform: none; letter-spacing: 0; color: var(--link); font-weight: 500; cursor: pointer; }
+.section > .foot { padding: 6px 4px 0; color: var(--muted); font-size: 12.5px; }
+.group { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.group > .item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; min-height: 52px; position: relative; }
+.group > .item + .item::before { content: ""; position: absolute; top: 0; left: 14px; right: 0; border-top: 1px solid var(--line); }
+.group > .item.tap { cursor: pointer; } .group > .item.tap:active { background: var(--line); }
+.group > .item.col { flex-direction: column; align-items: stretch; gap: 8px; }
+.group > .pad { padding: 14px; }
+.item .title { font-weight: 600; } .item .sub { color: var(--muted); font-size: 13px; }
+.item .right { color: var(--muted); font-size: 14px; white-space: nowrap; }
+.chev { color: var(--hint); width: 16px; height: 16px; flex: none; }
+.tile { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; flex: none; color: #fff; }
+.tile svg { width: 18px; height: 18px; }
+.t-blue { background: #2f7cf6; } .t-green { background: #30a46c; } .t-orange { background: #f76b15; }
+.t-purple { background: #8e4ec6; } .t-red { background: #e5484d; } .t-gray { background: #8b8d98; }
+.t-teal { background: #12a594; } .t-yellow { background: #e2a100; } .t-pink { background: #d6409f; }
+.empty { text-align: center; color: var(--muted); padding: 28px 16px; }
+
+/* stats */
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+.stat { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px; cursor: default; }
+.stat.tap { cursor: pointer; } .stat.tap:active { transform: scale(.98); }
+.stat .tile { margin-bottom: 10px; }
+.stat .n { font-size: 24px; font-weight: 750; letter-spacing: -.02em; line-height: 1.1; }
+.stat .l { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.stat.wide { grid-column: 1 / -1; }
+
+/* pills, badges */
+.pill { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; padding: 2px 8px;
+  border-radius: 99px; background: var(--line); color: var(--muted); white-space: nowrap; }
+.pill.blue { background: var(--tint); color: var(--accent); }
+.pill.red { background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger); }
+.pill.green { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
+.pill.orange { background: color-mix(in srgb, var(--orange) 15%, transparent); color: var(--orange); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--hint); flex: none; }
+.dot.running { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 22%, transparent); }
+.dot.off { background: var(--danger); }
+
+/* bars */
+.bar { height: 6px; background: var(--line); border-radius: 99px; overflow: hidden; }
+.bar > i { display: block; height: 100%; border-radius: 99px; background: var(--ok); transition: width .3s; }
+.bar > i.w1 { background: var(--warn); } .bar > i.w2 { background: var(--orange); } .bar > i.w3 { background: var(--danger); }
+
+/* server card */
+.scard { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px; margin-top: 10px; cursor: pointer; }
+.scard:active { transform: scale(.99); }
+.scard .top { display: flex; align-items: center; gap: 8px; }
+.scard .name { font-weight: 700; font-size: 16px; }
+.scard .meta { color: var(--muted); font-size: 13px; margin: 3px 0 10px; }
+.scard .foot { display: flex; align-items: center; gap: 8px; margin-top: 7px; font-size: 13px; color: var(--muted); }
+
+/* buttons */
+.btn { border: 0; border-radius: 12px; padding: 11px 14px; font-weight: 600; cursor: pointer;
+  background: var(--accent); color: var(--accent-text); display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.btn svg { width: 17px; height: 17px; }
+.btn.block { width: 100%; }
+.btn.tonal { background: var(--tint); color: var(--accent); }
+.btn.plain { background: var(--line); color: var(--text); }
+.btn.danger { background: var(--danger); color: #fff; }
+.btn.danger-tonal { background: color-mix(in srgb, var(--danger) 13%, transparent); color: var(--danger); }
+.btn.sm { padding: 6px 11px; border-radius: 9px; font-size: 13px; }
+.btn:disabled { opacity: .4; cursor: default; }
+.btn:not(:disabled):active { filter: brightness(.92); }
+.btnrow { display: flex; gap: 8px; flex-wrap: wrap; }
+.btnrow > .btn { flex: 1; }
+.link { color: var(--link); cursor: pointer; }
+
+/* quick actions */
+.quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+.qa { border: 0; background: var(--surface); box-shadow: var(--shadow); border-radius: 14px; padding: 12px 4px 10px;
+  display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--text); }
+.qa .tile { width: 36px; height: 36px; border-radius: 11px; }
+.qa:disabled { opacity: .4; cursor: default; }
+.qa:not(:disabled):active { transform: scale(.96); }
+
+/* hero */
+.hero { background: var(--surface); border-radius: 20px; box-shadow: var(--shadow); padding: 16px; display: flex; gap: 16px; align-items: center; margin-top: 6px; }
+.ring { position: relative; width: 92px; height: 92px; flex: none; }
+.ring svg { width: 92px; height: 92px; transform: rotate(-90deg); }
+.ring .v { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; line-height: 1.1; }
+.ring .v b { font-size: 20px; font-weight: 750; } .ring .v span { display: block; font-size: 11px; color: var(--muted); }
+
+/* forms */
+input[type=text], input[type=search], input[type=number], select {
+  width: 100%; padding: 11px 12px; border-radius: 12px; border: 1px solid transparent; background: var(--bg); outline: none; }
+input:focus, select:focus { border-color: var(--accent); }
+.search { position: relative; margin-top: 4px; }
+.search input { padding-left: 38px; background: var(--surface); box-shadow: var(--shadow); }
+.search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--hint); }
+label.f { display: block; margin: 12px 0 6px; color: var(--muted); font-size: 13px; font-weight: 600; }
+label.f:first-child { margin-top: 0; }
+.seg { display: flex; background: var(--line); border-radius: 11px; padding: 3px; gap: 2px; }
+.seg button { flex: 1; border: 0; background: none; padding: 7px 6px; border-radius: 9px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; white-space: nowrap; }
+.seg button.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chips.scroll { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 8px -16px 0; padding: 2px 16px; }
+.chips.scroll::-webkit-scrollbar { display: none; }
+.chip { border: 0; border-radius: 99px; padding: 7px 13px; background: var(--surface); box-shadow: var(--shadow);
+  font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; color: var(--text); }
+.group .chip { background: var(--bg); box-shadow: none; }
+.chip.on { background: var(--accent); color: var(--accent-text); }
+.chip:disabled { opacity: .4; cursor: default; }
+.switch { position: relative; width: 50px; height: 30px; flex: none; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.switch i { position: absolute; inset: 0; border-radius: 99px; background: var(--line); transition: .2s; cursor: pointer; }
+.switch i::after { content: ""; position: absolute; width: 26px; height: 26px; left: 2px; top: 2px; border-radius: 50%; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,.2); transition: .2s; }
+.switch input:checked + i { background: var(--ok); }
+.switch input:checked + i::after { transform: translateX(20px); }
+.radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--hint); flex: none; display: grid; place-items: center; }
+.radio.on { border-color: var(--accent); } .radio.on::after { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+
+/* code */
+.code { display: flex; align-items: center; gap: 8px; background: var(--bg); border-radius: 10px; padding: 8px 8px 8px 11px; }
+.code .mono { flex: 1; min-width: 0; word-break: break-all; }
+.copy { border: 0; background: var(--tint); color: var(--accent); border-radius: 8px; width: 32px; height: 32px; display: grid; place-items: center; cursor: pointer; flex: none; }
+.copy svg { width: 16px; height: 16px; }
+
+/* sheet, toast */
+#sheet { position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.38); display: flex; align-items: flex-end;
+  backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+#sheet.hidden { display: none; }
+#sheet .box { background: var(--bg); width: 100%; max-height: 90vh; overflow: auto; border-radius: 22px 22px 0 0;
+  padding: 8px 16px calc(18px + env(safe-area-inset-bottom)); animation: up .22s ease-out; max-width: 760px; margin: 0 auto; }
+#sheet .grab { width: 38px; height: 5px; border-radius: 99px; background: var(--line); margin: 0 auto 12px; }
+#sheet h3 { margin: 0 0 4px; font-size: 19px; font-weight: 700; }
+@keyframes up { from { transform: translateY(40px); opacity: .4; } to { transform: none; opacity: 1; } }
+#toast { position: fixed; top: calc(12px + env(safe-area-inset-top)); inset-inline: 16px; z-index: 40; display: flex; justify-content: center; pointer-events: none; }
+#toast span { background: rgba(28,28,30,.92); color: #fff; padding: 10px 16px; border-radius: 14px; font-size: 14px; font-weight: 500;
+  box-shadow: 0 8px 24px rgba(0,0,0,.2); animation: drop .2s ease-out; }
+@keyframes drop { from { transform: translateY(-10px); opacity: 0; } to { transform: none; opacity: 1; } }
+pre.log { white-space: pre-wrap; word-break: break-word; font: 12px/1.5 ui-monospace, Menlo, monospace; background: var(--surface);
+  border-radius: 12px; padding: 12px; max-height: 42vh; overflow: auto; margin: 8px 0 0; }
+details > summary { cursor: pointer; color: var(--link); font-weight: 600; list-style: none; padding: 4px 0; }
+details > summary::-webkit-details-marker { display: none; }
+.spin { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; flex: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.skeleton { height: 76px; border-radius: var(--radius); margin-top: 10px; background: linear-gradient(90deg, var(--surface) 25%, var(--line) 50%, var(--surface) 75%);
+  background-size: 200% 100%; animation: shimmer 1.2s infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+.plan.dim { opacity: .45; }
+</style>
+</head>
+<body>
+<header>
+  <div class="titles"><div class="sub" id="subtitle"></div><h1 id="title">Hetzner</h1></div>
+  <button class="iconbtn" id="reload" title="Refresh"></button>
+</header>
+<main id="view"><div class="skeleton"></div><div class="skeleton"></div></main>
+<nav id="tabs">
+  <button data-tab="dashboard" data-icon="home">Home</button>
+  <button data-tab="servers" data-icon="server">Servers</button>
+  <button data-tab="create" data-icon="plus">Create</button>
+  <button data-tab="alerts" data-icon="bell">Alerts</button>
+  <button data-tab="more" data-icon="grid">More</button>
+</nav>
+<div id="sheet" class="hidden"><div class="box" id="sheetBox"></div></div>
+<div id="toast"></div>
+<script>
+"use strict";
+const tg = window.Telegram && window.Telegram.WebApp;
+if (tg) { try { tg.ready(); tg.expand(); } catch (e) {} }
+const TB = 1024 ** 4;
+const S = { tab: "dashboard", stack: [], servers: null, filter: { q: "", sort: "traffic", near: false, account: "" },
+            create: null, jobTimer: null, seq: 0 };
+
+// ------------------------------------------------------------------ icons (constant SVG, never data)
+const P = {
+  home: '<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+  server: '<rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  bell: '<path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  refresh: '<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>',
+  power: '<path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/>',
+  reset: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
+  up: '<path d="m18 15-6-6-6 6"/>', down: '<path d="m6 9 6 6 6-6"/>',
+  chev: '<path d="m9 18 6-6-6-6"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/>',
+  trash: '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  camera: '<path d="M4 7h3l2-3h6l2 3h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="4"/>',
+  wallet: '<path d="M19 7V5a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-4a2 2 0 0 0 0 4h4v3a1 1 0 0 1-1 1H5a2 2 0 0 1-2-2V6"/>',
+  disk: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 14h18M7 17h.01"/>',
+  key: '<circle cx="7.5" cy="15.5" r="4.5"/><path d="m11 12 9-9M17 6l3 3M14 9l2 2"/>',
+  wrench: '<path d="M14.7 6.3a4 4 0 0 0 5 5L22 14l-8 8-2.3-2.3a4 4 0 0 0-5-5L2 10l8-8z" transform="scale(.9) translate(1.3 1.3)"/>',
+  puzzle: '<path d="M10 3h4v3a2 2 0 1 0 4 0V3h3v7h-3a2 2 0 1 0 0 4h3v7h-7v-3a2 2 0 1 0-4 0v3H3v-7h3a2 2 0 1 0 0-4H3V3z"/>',
+  pin: '<path d="M12 21s-7-6.1-7-11a7 7 0 1 1 14 0c0 4.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>',
+  tag: '<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
+  edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+  euro: '<path d="M18 7a7 7 0 1 0 0 10M4 10h10M4 14h10"/>',
+  shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+  arrows: '<path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4"/>',
+  fire: '<path d="M12 22c4.4 0 7-2.9 7-7 0-4.6-4-7-4-11-3 2-6 5.5-6 9-1-1-2-2.5-2-4-2 2-2 4.5-2 6 0 4.1 2.6 7 7 7z"/>',
+  link: '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>',
+  unlink: '<path d="m18.8 13.4 1.7-1.7a5 5 0 0 0-7-7l-1.7 1.7M5.2 10.6l-1.7 1.7a5 5 0 0 0 7 7l1.7-1.7M8 2v3M2 8h3M16 22v-3M22 16h-3"/>',
+  update: '<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',
+  check: '<path d="m5 12 5 5 9-10"/>',
+  moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
+  pause: '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',
+  play: '<path d="M7 4v16l13-8z"/>',
+  pulse: '<path d="M3 12h4l3-8 4 16 3-8h4"/>',
+  lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  swap: '<path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/>',
+  clone: '<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
+};
+function icon(name, cls) {
+  const s = document.createElement("span");
+  s.style.display = "contents";
+  s.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"${cls ? ` class="${cls}"` : ""}>${P[name] || ""}</svg>`;
+  return s.firstChild;
+}
+const tile = (name, color) => h("span", { class: "tile t-" + color }, icon(name));
+
+// ------------------------------------------------------------------ helpers
+function h(tag, props, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (k === "class") el.className = v;
+    else if (k === "value") el.value = v;
+    else if (k === "checked") el.checked = !!v;
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const kid of kids.flat(Infinity)) {
+    if (kid === null || kid === undefined || kid === false || kid === "") continue;
+    el.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  }
+  return el;
+}
+const num = (n, d = 0) => Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+const eur = (n) => "€" + num(n, 2);
+const tb = (b) => num((b || 0) / TB, 2);
+const gb = (n) => `${num(n, Number(n) % 1 ? 1 : 0)} GB`;
+const pct = (f) => num((f || 0) * 100, 0) + "%";
+const STATUS = { running: "Running", off: "Off", starting: "Starting", stopping: "Stopping",
+                 initializing: "Initializing", rebuilding: "Rebuilding", migrating: "Migrating" };
+const WEEK = [[5, "Saturday"], [6, "Sunday"], [0, "Monday"], [1, "Tuesday"], [2, "Wednesday"], [3, "Thursday"], [4, "Friday"]];
+const REPEAT = { o: "Once", d: "Daily", w: "Weekly", m: "Monthly" };
+const iranFmt = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Tehran", weekday: "short", day: "numeric",
+                                                   month: "short", hour: "2-digit", minute: "2-digit", hour12: false });
+const iranDay = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Tehran", weekday: "short", day: "numeric", month: "short" });
+const iranHM = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Tehran", hour: "2-digit", minute: "2-digit", hour12: false });
+const isoDay = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tehran", year: "numeric", month: "2-digit", day: "2-digit" });
+const when = (epoch) => epoch ? iranFmt.format(new Date(epoch * 1000)) : "";
+const isoWhen = (iso) => iso ? iranFmt.format(new Date(iso)) : "";
+const hhmm = (hr, mi) => String(hr).padStart(2, "0") + ":" + String(mi).padStart(2, "0");
+const plural = (n, word) => `${num(n)} ${word}${n === 1 ? "" : "s"}`;
+
+function describe(s) {
+  const at = hhmm(s.hour, s.minute);
+  if (s.repeat === "d") return `Every day at ${at}`;
+  if (s.repeat === "w") return `Every ${(WEEK.find((w) => w[0] === Number(s.day)) || [0, "?"])[1]} at ${at}`;
+  if (s.repeat === "m") return `Monthly on day ${s.day} at ${at}`;
+  const d = String(s.day);
+  const date = new Date(Date.UTC(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6, 8), 12));
+  return `Once, ${iranDay.format(date)} at ${at}`;
+}
+
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.replaceChildren(h("span", {}, msg));
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => t.replaceChildren(), 2600);
+}
+function haptic(kind) { try { tg.HapticFeedback.notificationOccurred(kind); } catch (e) {} }
+
+async function copy(text) {
+  try { await navigator.clipboard.writeText(text); }
+  catch (e) {
+    const ta = h("textarea", {}, text);
+    document.body.append(ta); ta.select();
+    try { document.execCommand("copy"); } catch (e2) {}
+    ta.remove();
+  }
+  haptic("success"); toast("Copied");
+}
+const copyBtn = (text, title = "Copy") => h("button", { class: "copy", title, onclick: (e) => { e.stopPropagation(); copy(text); } }, icon("copy"));
+const codeBox = (text) => h("div", { class: "code" }, h("span", { class: "mono" }, text), copyBtn(text));
+
+function confirmBox(text) {
+  return new Promise((resolve) => {
+    if (tg && tg.showConfirm && tg.isVersionAtLeast && tg.isVersionAtLeast("6.2")) tg.showConfirm(text, resolve);
+    else resolve(window.confirm(text));
+  });
+}
+
+async function api(method, path, body) {
+  const res = await fetch(path, {
+    method, headers: { "Content-Type": "application/json", "X-Telegram-Init-Data": (tg && tg.initData) || "" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  let data = {};
+  try { data = await res.json(); } catch (e) {}
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+
+// A page's data: dropped (Stale) when a newer render started meanwhile, so a slow
+// answer never draws an old page over the one the user moved to.
+class Stale extends Error {}
+async function load(path) {
+  const seq = S.seq;
+  const data = await api("GET", path);
+  if (seq !== S.seq) throw new Stale("stale");
+  return data;
+}
+
+// Run an action, then toast + redraw; returns the response (undefined on failure).
+async function act(call, okMsg) {
+  try { const r = await call(); haptic("success"); if (okMsg) toast(okMsg); render(); return r; }
+  catch (e) { fail(e); }
+}
+
+const barCls = (f) => f >= 1 ? "w3" : f >= 0.85 ? "w2" : f >= 0.75 ? "w1" : "";
+function barEl(fraction) {
+  const f = Math.max(0, fraction || 0);
+  return h("div", { class: "bar" }, h("i", { class: barCls(f), style: `width:${Math.min(100, f * 100).toFixed(1)}%` }));
+}
+function ring(fraction, label) {
+  const f = Math.max(0, fraction || 0), r = 40, c = 2 * Math.PI * r;
+  const color = f >= 1 ? "var(--danger)" : f >= 0.85 ? "var(--orange)" : f >= 0.75 ? "var(--warn)" : "var(--ok)";
+  const wrap = h("div", { class: "ring" });
+  wrap.innerHTML = `<svg viewBox="0 0 92 92"><circle cx="46" cy="46" r="${r}" fill="none" stroke="currentColor" stroke-opacity=".1" stroke-width="9"/>` +
+    `<circle cx="46" cy="46" r="${r}" fill="none" stroke="${color}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${(c * (1 - Math.min(1, f))).toFixed(1)}"/></svg>`;
+  wrap.append(h("div", { class: "v" }, h("div", {}, h("b", {}, pct(f)), h("span", {}, label))));
+  return wrap;
+}
+
+// List building blocks.
+function section(title, kids, opts = {}) {
+  return h("div", { class: "section" },
+    title || opts.action ? h("div", { class: "head" }, h("span", {}, title || ""), opts.action || "") : "",
+    h("div", { class: "group" }, kids),
+    opts.foot ? h("div", { class: "foot" }, opts.foot) : "");
+}
+function item({ lead, title, sub, right, onclick, chevron, cls }) {
+  return h("div", { class: "item" + (onclick ? " tap" : "") + (cls ? " " + cls : ""), onclick },
+    lead || "",
+    h("div", { class: "grow" }, title !== undefined ? h("div", { class: "title ellipsis" }, title) : "", sub ? h("div", { class: "sub" }, sub) : ""),
+    right !== undefined ? (right instanceof Node || Array.isArray(right) ? right : h("span", { class: "right" }, right)) : "",
+    chevron ? icon("chev", "chev") : "");
+}
+const pad = (...kids) => h("div", { class: "item col" }, kids);
+const emptyItem = (text) => h("div", { class: "empty" }, text);
+function seg(options, value, onchange) {
+  return h("div", { class: "seg" }, options.map(([v, label]) =>
+    h("button", { class: v === value ? "on" : "", onclick: () => onchange(v) }, label)));
+}
+function switchEl(checked, onchange) {
+  const input = h("input", { type: "checkbox", checked });
+  input.addEventListener("change", () => onchange(input.checked, input));
+  return h("label", { class: "switch" }, input, h("i"));
+}
+const btn = (label, onclick, cls = "", extra = {}) => h("button", Object.assign({ class: "btn " + cls, onclick }, extra), label);
+
+function setView(...kids) { document.getElementById("view").replaceChildren(...kids); window.scrollTo(0, window.scrollY); }
+function setTitle(t, sub) {
+  document.getElementById("title").textContent = t;
+  document.getElementById("subtitle").textContent = sub || "";
+}
+function fail(e) { haptic("error"); toast("⚠️ " + e.message); }
+
+// ------------------------------------------------------------------ navigation
+const TITLES = { dashboard: "Overview", servers: "Servers", create: "New server", alerts: "Alerts",
+                 more: "More", cost: "Costs", "ips:fip": "Floating IPs", "ips:pip": "Primary IPs",
+                 snapshots: "Snapshots", health: "Health", running: "Running now" };
+function updateBack() {
+  if (!tg || !tg.BackButton) return;
+  S.stack.length ? tg.BackButton.show() : tg.BackButton.hide();
+}
+function go(tab) {
+  S.tab = tab; S.stack = [];
+  document.querySelectorAll("nav#tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
+  setTitle(TITLES[tab]); updateBack(); window.scrollTo(0, 0); render();
+}
+function openPage(key) {
+  S.stack.push(S.tab); S.tab = key; updateBack();
+  if (TITLES[key]) setTitle(TITLES[key]);
+  window.scrollTo(0, 0); render();
+}
+function openServer(id) { openPage("server:" + id); }
+function back() {
+  if (!S.stack.length) return;
+  S.tab = S.stack.pop(); updateBack();
+  setTitle(TITLES[S.tab] || "Hetzner"); render();
+}
+if (tg && tg.BackButton) tg.BackButton.onClick(back);
+document.querySelectorAll("nav#tabs button").forEach((b) => {
+  b.prepend(icon(b.dataset.icon));
+  b.addEventListener("click", () => go(b.dataset.tab));
+});
+document.getElementById("reload").append(icon("refresh"));
+document.getElementById("reload").addEventListener("click", () => render());
+
+async function render() {
+  const tab = S.tab;
+  S.seq += 1;
+  try {
+    if (tab === "dashboard") await renderDashboard();
+    else if (tab === "servers") await renderServers(true);
+    else if (tab === "create") await renderCreate();
+    else if (tab === "alerts") await renderAlerts();
+    else if (tab === "more") renderMore();
+    else if (tab === "cost") await renderCost();
+    else if (tab === "snapshots") await renderSnapshots();
+    else if (tab === "health") await renderHealth();
+    else if (tab === "running") await renderRunning();
+    else if (tab.startsWith("ips:")) await renderIps(tab.slice(4));
+    else if (tab.startsWith("server:")) await renderServer(Number(tab.slice(7)));
+    else if (tab.startsWith("srvnet:")) await renderNetwork(Number(tab.slice(7)));
+    else if (tab.startsWith("srvmng:")) await renderManage(Number(tab.slice(7)));
+  } catch (e) {
+    if (e instanceof Stale) return;
+    setView(h("div", { class: "empty" }, "⚠️ " + e.message, h("div", { class: "spacer" }), btn("Try again", render, "tonal")));
+  }
+}
+
+// ------------------------------------------------------------------ server card
+function serverCard(s, opts = {}) {
+  return h("div", { class: "scard", onclick: () => openServer(s.id) },
+    h("div", { class: "top" },
+      h("span", { class: "dot " + (s.status || "") }),
+      h("span", { class: "name grow ellipsis" }, s.name),
+      s.panel && h("span", { class: "pill blue" }, "🧩 " + s.panel),
+      opts.account && h("span", { class: "pill" }, s.account),
+      icon("chev", "chev")),
+    h("div", { class: "meta ellipsis" }, `${s.flag} ${s.location} · ${s.plan} · ${s.ip || "no IPv4"}`),
+    barEl(s.fraction),
+    h("div", { class: "foot" },
+      h("span", { class: "grow" }, h("b", { style: "color:var(--text)" }, pct(s.fraction)), ` · ${tb(s.traffic)} / ${num(s.traffic_limit / TB)} TB`),
+      s.next_reset && h("span", { class: "pill" }, "⏰ scheduled"),
+      s.return_to && h("span", { class: "pill orange" }, "↩ " + s.return_to),
+      s.locked && h("span", { class: "pill red" }, "🔒 locked"),
+      s.busy && h("span", { class: "pill blue" }, h("span", { class: "spin", style: "width:10px;height:10px" }), "busy")));
+}
+
+function jobRows(jobs) {
+  return jobs.map((j) => item({ lead: h("span", { class: "spin" }), title: j.title, sub: j.stage, onclick: () => showJob(j.id), chevron: true }));
+}
+
+// ------------------------------------------------------------------ dashboard
+async function renderDashboard() {
+  const d = await load("/api/dashboard");
+  setTitle("Overview", "Iran time " + iranFmt.format(new Date()));
+  const stat = (ic, color, n, l, onclick) => h("div", { class: "stat" + (onclick ? " tap" : ""), onclick }, tile(ic, color), h("div", { class: "n" }, n), h("div", { class: "l" }, l));
+  const kids = [h("div", { class: "stats" },
+    stat("server", "blue", num(d.servers), `${num(d.running)} running`, () => go("servers")),
+    stat("fire", d.over ? "red" : "orange", num(d.near + d.over), d.over ? `${num(d.near)} near · ${num(d.over)} over limit` : "Near traffic limit",
+      () => { S.filter.near = true; go("servers"); }),
+    stat("wallet", "green", eur(d.cost), d.overage ? `per month + ${eur(d.overage)} overage` : "per month", () => openPage("cost")),
+    stat("bell", "purple", num(d.alerts), "Alerts & schedules", () => go("alerts")))];
+  const alerts = [];
+  if (d.paused) alerts.push(item({ lead: tile("pause", "orange"), title: d.paused, sub: "Auto reset, scheduled resets and stock alerts wait",
+    right: btn("Resume", () => act(() => api("POST", "/api/automation", { resume: true }), "Automations resumed"), "tonal sm") }));
+  for (const p of d.problems) alerts.push(item({ lead: tile("shield", p.status === "auth" || p.status === "forbidden" ? "red" : "orange"),
+    title: `Account ${p.account}`, sub: p.label, onclick: () => openPage("health"), chevron: true }));
+  if (alerts.length) kids.push(section("Attention", alerts));
+  if (d.jobs.length) kids.push(section("Running", jobRows(d.jobs)));
+  kids.push(section("", [
+    item({ lead: tile("pulse", d.problems.length ? "red" : "green"), title: "Health & safety",
+      sub: d.problems.length ? `${plural(d.problems.length, "account")} with a problem` : d.paused ? "Automations paused" : "All accounts answer · pause automations",
+      onclick: () => openPage("health"), chevron: true }),
+    item({ lead: tile("clock", "blue"), title: "Running now", sub: d.activity ? `${plural(d.activity, "server")} busy with the bot` : "Resets, plan changes, Hetzner actions",
+      onclick: () => openPage("running"), chevron: true })]));
+  kids.push(h("div", { class: "section" }, h("div", { class: "head" }, h("span", {}, "Top traffic"), h("a", { onclick: () => go("servers") }, "See all")),
+    d.top.length ? d.top.map((s) => serverCard(s, { account: d.accounts.length > 1 })) : h("div", { class: "group" }, emptyItem("No servers yet"))));
+  kids.push(versionCard(d.version));
+  setView(...kids);
+}
+
+function versionCard(current) {
+  const body = h("div");
+  const card = section("Bot", [
+    item({ lead: tile("update", "gray"), title: "Version " + current, right: btn("Check for updates", check, "tonal sm") }),
+    h("div", { class: "item col", style: "display:none" }, body)]);
+  async function check() {
+    body.parentNode.style.display = "";
+    body.replaceChildren(h("div", { class: "row muted" }, h("span", { class: "spin" }), "Checking…"));
+    let v;
+    try { v = await api("GET", "/api/version"); } catch (e) { body.replaceChildren(h("div", { class: "muted" }, "⚠️ " + e.message)); return; }
+    const kids = [];
+    if (v.error) kids.push(h("div", { class: "muted small" }, "⚠️ Could not check for a new version: ", h("span", { class: "mono" }, v.error)));
+    else if (v.newer) kids.push(h("div", {}, h("b", {}, "New version " + v.latest)),
+      v.changes ? h("pre", { class: "log", dir: "auto", style: "background:var(--bg)" }, v.changes) : "");
+    else kids.push(h("div", { class: "muted" }, "✅ You are on the latest version."));
+    kids.push(h("div", { class: "btnrow" },
+      btn(v.newer ? `Update to ${v.latest}` : "Run the update again", () => run("update"), v.newer ? "" : "plain"),
+      v.rollback && btn(`Roll back to ${v.rollback}`, () => run("rollback"), "plain")));
+    body.replaceChildren(...kids);
+  }
+  async function run(action) {
+    const q = action === "update" ? "Update and restart the bot? A running reset or plan change is interrupted."
+                                  : "Roll back to the previous version and restart?";
+    if (!(await confirmBox(q))) return;
+    try {
+      await api("POST", "/api/update", { action });
+      haptic("success");
+      body.replaceChildren(h("div", {}, "⏳ Started. The bot restarts in a few seconds and reports the result in the chat; reopen this page in a minute."));
+    } catch (e) { fail(e); }
+  }
+  return card;
+}
+
+// ------------------------------------------------------------------ servers
+async function renderServers(refetch) {
+  if (refetch || !S.servers) S.servers = await load("/api/servers");
+  const { servers, accounts, warning } = S.servers;
+  const F = S.filter;
+  const list = servers.filter((s) => (!F.account || s.account === F.account) && (!F.near || s.fraction >= warning));
+  list.sort(F.sort === "traffic" ? (a, b) => b.fraction - a.fraction : (a, b) => a.name.localeCompare(b.name));
+  const nearCount = servers.filter((s) => s.fraction >= warning).length;
+  const search = h("input", { type: "search", placeholder: "Search name, IP or plan", value: F.q });
+  search.addEventListener("input", () => { F.q = search.value; drawList(); });
+  const chip = (label, on, fn) => h("button", { class: "chip" + (on ? " on" : ""), onclick: fn }, label);
+  const listBox = h("div");
+  function drawList() {
+    const qq = F.q.trim().toLowerCase();
+    const shown = list.filter((s) => !qq || s.name.toLowerCase().includes(qq) || (s.ip || "").startsWith(qq) || (s.plan || "").includes(qq));
+    setTitle("Servers", `${num(shown.length)} of ${num(servers.length)}`);
+    listBox.replaceChildren(...(shown.length ? shown.map((s) => serverCard(s, { account: accounts.length > 1 }))
+      : [h("div", { class: "group", style: "margin-top:10px" }, emptyItem(F.near ? "No server is near its limit" : "No server found"))]));
+  }
+  const chips = h("div", { class: "chips scroll" },
+    chip(F.sort === "traffic" ? "↓ Traffic" : "A–Z Name", false, () => { F.sort = F.sort === "traffic" ? "name" : "traffic"; renderServers(); }),
+    chip(`🔥 Near limit · ${num(nearCount)}`, F.near, () => { F.near = !F.near; renderServers(); }),
+    accounts.length > 1 && chip("All accounts", !F.account, () => { F.account = ""; renderServers(); }),
+    accounts.length > 1 && accounts.map((a) => chip(a, F.account === a, () => { F.account = a; renderServers(); })));
+  setView(h("div", { class: "search" }, icon("search"), search), chips, listBox,
+    h("div", { class: "spacer" }), btn([icon("plus"), "Create server"], () => go("create"), "tonal block"));
+  drawList();
+}
+
+// ------------------------------------------------------------------ one server
+async function renderServer(id) {
+  const s = await load("/api/server/" + id);
+  setTitle(s.name, `${s.flag} ${s.country} · ${s.account}`);
+  const kids = [];
+  if (s.jobs.length) kids.push(section("Running", jobRows(s.jobs)));
+  kids.push(h("div", { class: "hero" },
+    ring(s.fraction, "traffic"),
+    h("div", { class: "grow" },
+      h("div", { class: "row", style: "gap:6px;margin-bottom:4px;flex-wrap:wrap" },
+        h("span", { class: "pill " + (s.status === "running" ? "green" : s.status === "off" ? "red" : "blue") }, h("span", { class: "dot " + s.status }), STATUS[s.status] || s.status),
+        h("span", { class: "pill" }, s.plan),
+        s.panel && h("span", { class: "pill blue" }, "🧩 " + s.panel),
+        s.protected && h("span", { class: "pill green" }, "🛡 protected"),
+        s.locked && h("span", { class: "pill red" }, "🔒 locked")),
+      h("div", { style: "font-weight:700;font-size:17px" }, `${tb(s.traffic)} / ${num(s.traffic_limit / TB)} TB`),
+      h("div", { class: "muted small" }, `Overage ${eur(s.overage_per_tb)}/TB` + (s.overage ? ` · ${eur(s.overage)} so far` : "")),
+      s.return_to && h("div", { class: "small", style: "color:var(--orange);margin-top:4px" }, `↩ Waiting to move back to ${s.return_to}`))));
+
+  const busy = s.busy || s.jobs.length > 0;
+  const qa = (ic, color, label, onclick, disabled) => h("button", { class: "qa", onclick, disabled }, tile(ic, color), label);
+  kids.push(h("div", { class: "quick" },
+    qa("power", s.status === "running" ? "red" : "green", s.status === "running" ? "Power off" : "Power on", () => doPower(s), busy),
+    qa("reset", "blue", "Reset traffic", () => doReset(s), busy),
+    qa("down", "gray", s.nav.prev || "Smaller", () => pickPlan(s, s.plans.find((p) => p.name === s.nav.prev) || { name: s.nav.prev }), busy || !s.nav.prev),
+    qa("up", "purple", s.nav.next || "Bigger", () => pickPlan(s, s.plans.find((p) => p.name === s.nav.next) || { name: s.nav.next }), busy || !s.nav.next)));
+
+  kids.push(section("Details", [
+    item({ lead: tile("server", "blue"), title: `${s.cores} vCPU · ${num(s.memory)} GB RAM`, sub: `${s.disk} GB disk` + (s.disk !== s.plan_disk ? ` (plan ${s.plan_disk} GB)` : "") + (s.arch ? ` · ${s.arch}` : "") }),
+    item({ lead: tile("globe", "teal"), title: s.ip || "No IPv4", sub: s.ipv6 || "IPv6 off", right: s.ip ? copyBtn(s.ip) : undefined }),
+    item({ lead: tile("euro", "green"), title: eur(s.price) + " / month", sub: s.price_override ? `Custom price · list ${eur(s.list_price)}` : "Hetzner list price" }),
+  ]));
+  kids.push(section("", [
+    item({ lead: tile("link", "teal"), title: "Network", sub: "Floating IPs, volumes, add to panel", onclick: () => openPage("srvnet:" + s.id), chevron: true }),
+    item({ lead: tile("gear", "gray"), title: "Manage", sub: "Rename, price, backups, password, snapshots, rebuild, delete", onclick: () => openPage("srvmng:" + s.id), chevron: true }),
+  ]));
+
+  const sch = s.schedules.map((x) => item({ lead: tile("clock", "orange"), title: describe(x), sub: "Next: " + when(x.next_run),
+    right: btn("Delete", () => delSchedule(x.id), "danger-tonal sm") }));
+  sch.push(pad(scheduleForm(s)));
+  const ar = s.auto_reset;
+  sch.push(item({ lead: tile("moon", "purple"), title: "Auto reset",
+    sub: !ar.enabled ? "Off for every server (Alerts → Auto reset)"
+      : ar.included ? `Nightly at ${ar.server_time}${ar.own_time ? " (its own time)" : ""} when at ${ar.threshold}%+ or on pace to pass 100%` : "Off for this server",
+    right: switchEl(ar.included, (on) => act(() => api("POST", `/api/server/${s.id}/auto-reset`, { on }), on ? "Auto reset on" : "Auto reset off")) }));
+  if (ar.enabled && ar.included) {
+    const t = h("select", {}, h("option", { value: "" }, `Default time (${ar.time})`),
+      [...Array(24).keys()].flatMap((hr) => ar.minutes.map((mi) => h("option", { value: hhmm(hr, mi) }, hhmm(hr, mi)))));
+    t.value = ar.own_time ? ar.server_time : "";
+    t.addEventListener("change", () => {
+      const body = t.value ? { hour: +t.value.slice(0, 2), minute: +t.value.slice(3) } : { default_time: true };
+      act(() => api("POST", `/api/server/${s.id}/auto-reset`, body), t.value ? `Auto reset at ${t.value}` : "Default time");
+    });
+    sch.push(pad(h("div", { class: "row" }, h("div", { class: "small muted grow", style: "font-weight:600" }, "Auto reset time (Iran)"), h("div", { style: "width:170px" }, t))));
+  }
+  kids.push(section("Traffic reset schedule", sch, { foot: "Times are Iran time (Asia/Tehran)." }));
+
+  if (s.watches.length) kids.push(section("Plan alerts", s.watches.map((w) => watchItem(w))));
+
+  kids.push(section("Change plan", s.plans.map((p) => item({
+    cls: "plan" + (p.disk_ok ? "" : " dim"),
+    title: [p.name, " ", !p.in_stock && h("span", { class: "pill orange" }, "sold out?"), " ", !p.disk_ok && h("span", { class: "pill" }, "disk too small"), " ", p.watching && h("span", { class: "pill blue" }, "🔔 alert")],
+    sub: `${p.cores} vCPU · ${num(p.memory)} GB · ${p.disk} GB`,
+    right: eur(p.price),
+    onclick: p.disk_ok && !busy ? () => pickPlan(s, p) : null,
+    chevron: p.disk_ok && !busy,
+  })), { foot: "\"Sold out?\" is Hetzner's stock flag; it is often wrong, so trying costs nothing: a refused change powers the server back on." }));
+
+  if (s.last_reset) kids.push(h("div", { class: "section" }, h("details", {}, h("summary", {}, `Last reset log · ${s.last_reset.at}`),
+    h("pre", { class: "log" }, s.last_reset.logs.join("\n")))));
+  setView(...kids);
+}
+
+function watchItem(w, withServer) {
+  const what = w.return ? "Move back after a reset" : w.auto ? "Switch automatically" : "Notify only";
+  const extra = [what, `in ${w.location}`];
+  if (w.failures) extra.push(`${plural(w.failures, "refusal")}`);
+  if (w.retry_after * 1000 > Date.now()) extra.push("next try " + iranHM.format(new Date(w.retry_after * 1000)));
+  return item({
+    lead: tile("bell", w.return ? "orange" : "purple"),
+    title: [withServer ? (w.server_name || "#" + w.server_id) + ": " : "", w.current ? `${w.current} → ` : "", w.plan],
+    sub: extra.join(" · "),
+    onclick: withServer ? () => openServer(w.server_id) : null,
+    right: btn("Cancel", async (e) => {
+      e.stopPropagation();
+      if (!(await confirmBox(`Cancel the ${w.plan} alert?`))) return;
+      act(() => api("POST", `/api/server/${w.server_id}/watch`, { plan: w.plan, on: false }), "Cancelled");
+    }, "plain sm"),
+  });
+}
+
+function scheduleForm(s) {
+  const st = { repeat: "m" };
+  const day = h("select");
+  const hour = h("select", {}, [...Array(24).keys()].map((x) => h("option", { value: x }, String(x).padStart(2, "0") + ":00")));
+  const minute = h("select", {}, [...Array(12).keys()].map((x) => h("option", { value: x * 5 }, ":" + String(x * 5).padStart(2, "0"))));
+  hour.value = "4";
+  const segBox = h("div");
+  function fill() {
+    segBox.replaceChildren(seg(Object.entries(REPEAT), st.repeat, (v) => { st.repeat = v; fill(); }));
+    let opts = [];
+    if (st.repeat === "o") {
+      for (let i = 0; i < 14; i++) {
+        const d = new Date(Date.now() + i * 86400000);
+        opts.push([isoDay.format(d).replaceAll("-", ""), (i === 0 ? "Today, " : i === 1 ? "Tomorrow, " : "") + iranDay.format(d)]);
+      }
+    } else if (st.repeat === "w") opts = WEEK.map(([n, name]) => [n, name]);
+    else if (st.repeat === "m") opts = [...Array(31).keys()].map((x) => [x + 1, "Day " + (x + 1)]);
+    day.replaceChildren(...opts.map(([v, t]) => h("option", { value: v }, t)));
+    day.style.display = st.repeat === "d" ? "none" : "";
+  }
+  fill();
+  return [h("div", { class: "small muted", style: "font-weight:600" }, "New schedule"), segBox,
+    h("div", { class: "row" }, h("div", { class: "grow" }, day), h("div", { style: "width:92px" }, hour), h("div", { style: "width:78px" }, minute)),
+    btn([icon("plus"), "Add schedule"], async () => {
+      try {
+        await api("POST", `/api/server/${s.id}/schedule`, { repeat: st.repeat, day: st.repeat === "d" ? 0 : day.value, hour: hour.value, minute: minute.value });
+        haptic("success"); toast("Schedule added"); render();
+      } catch (e) { fail(e); }
+    }, "tonal block")];
+}
+
+async function delSchedule(id) {
+  if (!(await confirmBox("Delete this schedule?"))) return;
+  act(() => api("DELETE", "/api/schedule/" + id), "Deleted");
+}
+
+async function doPower(s) {
+  const off = s.status === "running";
+  if (!(await confirmBox(off ? `Power off ${s.name}?` : `Power on ${s.name}?`))) return;
+  try { const j = await api("POST", `/api/server/${s.id}/power`, { action: off ? "off" : "on" }); showJob(j.id); } catch (e) { fail(e); }
+}
+
+async function doReset(s) {
+  if (!(await confirmBox(`Reset the traffic of ${s.name}?\nThe server moves to another plan and back, and is off twice for a few minutes.`))) return;
+  try { const j = await api("POST", `/api/server/${s.id}/reset`); showJob(j.id); } catch (e) { fail(e); }
+}
+
+function pickPlan(s, p) {
+  const box = sheet();
+  box.append(h("h3", {}, `Move to ${p.name}`), h("div", { class: "muted small" }, s.name));
+  const rows = [];
+  if (p.cores) rows.push(item({ title: `${p.cores} vCPU · ${num(p.memory)} GB · ${p.disk} GB disk`, sub: `Now ${eur(s.list_price)} / month`, right: eur(p.price) + " /mo" }));
+  if (p.in_stock === false) rows.push(item({ lead: tile("fire", "orange"), title: "Hetzner says this plan is sold out here", sub: "It may still work; if refused, the server is powered back on unchanged." }));
+  rows.push(item({ lead: tile("power", "gray"), title: "The server is off during the change", sub: "A grandfathered cheaper price is lost: the current list price applies." }));
+  box.append(h("div", { class: "group", style: "margin-top:12px" }, rows));
+  const go_ = async (upgrade) => {
+    closeSheet();
+    try { const j = await api("POST", `/api/server/${s.id}/plan`, { plan: p.name, upgrade_disk: upgrade }); showJob(j.id); } catch (e) { fail(e); }
+  };
+  box.append(h("div", { style: "display:grid;gap:8px;margin-top:14px" },
+    btn("Change (CPU and RAM only)", () => go_(false), "block"),
+    p.disk && p.disk > s.disk && btn("Change + upgrade disk (permanent)", () => go_(true), "tonal block"),
+    btn(p.watching ? "Stop the alert for this plan" : "🔔 Switch automatically when in stock", async () => {
+      try { await api("POST", `/api/server/${s.id}/watch`, { plan: p.name, on: !p.watching }); closeSheet(); toast(p.watching ? "Alert cancelled" : "It will switch once the plan is back"); render(); } catch (e) { fail(e); }
+    }, "plain block"),
+    btn("Cancel", closeSheet, "plain block")));
+}
+
+// ------------------------------------------------------------------ sheet + jobs
+function sheet() {
+  const el = document.getElementById("sheet");
+  const box = document.getElementById("sheetBox");
+  box.replaceChildren(h("div", { class: "grab" })); el.classList.remove("hidden");
+  return box;
+}
+function closeSheet() {
+  document.getElementById("sheet").classList.add("hidden");
+  clearTimeout(S.jobTimer); S.jobTimer = null;
+}
+document.getElementById("sheet").addEventListener("click", (e) => { if (e.target.id === "sheet") { closeSheet(); render(); } });
+
+function secretSheet(title, secret, note) {
+  const box = sheet();
+  box.append(h("h3", {}, title));
+  if (secret) box.append(h("div", { style: "margin-top:12px" }, codeBox(secret)));
+  if (note) box.append(h("p", { class: "muted small" }, note));
+  box.append(btn("Done", () => { closeSheet(); render(); }, "plain block", { style: "margin-top:12px" }));
+}
+
+async function showJob(id) {
+  clearTimeout(S.jobTimer);
+  let j;
+  try { j = await api("GET", "/api/job/" + id); } catch (e) { fail(e); closeSheet(); return; }
+  const box = sheet();
+  box.append(h("h3", {}, j.done ? (j.ok ? "✅ " : "⚠️ ") : "", j.title));
+  if (!j.done) {
+    if (j.steps) box.append(h("div", { class: "muted small", style: "margin:10px 0 6px" }, `Step ${j.step} of ${j.steps} · ${j.stage}`), barEl(j.step / j.steps));
+    else box.append(h("div", { class: "row muted", style: "margin-top:10px" }, h("span", { class: "spin" }), j.stage));
+    if (j.logs.length) box.append(h("div", { class: "mono muted", style: "margin-top:8px" }, j.logs[j.logs.length - 1]));
+    box.append(h("p", { class: "muted small" }, "You can close this; the result also comes in the bot chat."));
+  } else box.append(jobResult(j));
+  if (j.logs.length && j.done) box.append(h("details", { style: "margin-top:8px" }, h("summary", {}, "Full log"), h("pre", { class: "log" }, j.logs.join("\n"))));
+  box.append(btn(j.done ? "Done" : "Close (keeps running)", () => { closeSheet(); render(); }, "plain block", { style: "margin-top:12px" }));
+  if (!j.done) S.jobTimer = setTimeout(() => showJob(id), 1500);
+  else haptic(j.ok ? "success" : "error");
+}
+
+function jobResult(j) {
+  const r = j.result || {};
+  if (j.kind === "reset") {
+    const out = h("div", { style: "margin-top:8px" });
+    if (r.before !== null && r.before !== undefined && r.reset)
+      out.append(h("div", { class: "stat", style: "margin:8px 0" }, h("div", { class: "n" }, `${tb(r.before)} → ${tb(r.after)} TB`), h("div", { class: "l" }, "Traffic")));
+    if (r.home) out.append(h("p", {}, `⚠️ The server is on ${r.plan}, not ${r.home}.`, r.reset ? " The traffic was reset, but there was no room to move back." : "",
+      r.watching ? ` It moves back to ${r.home} by itself once the plan is in stock.` : ""));
+    else out.append(h("p", {}, r.reset ? "✅ Traffic reset complete." : "❌ The reset did not happen; see the log."));
+    if (r.text) out.append(h("p", {}, r.text));
+    return out;
+  }
+  if (j.kind === "create" && r.servers) {
+    const rows = r.servers.map((x) => item({
+      lead: tile(x.ok ? "check" : "server", x.ok ? "green" : "red"),
+      title: x.name,
+      sub: x.ok ? [x.ip || "", x.password ? " · password " : "", x.password ? h("span", { class: "mono" }, x.password) : ""] : x.error,
+      right: x.ok ? h("div", { class: "row", style: "gap:6px" }, x.ip && copyBtn(x.ip, "Copy IP"), x.password && copyBtn(x.password, "Copy password"),
+        btn("Open", () => { closeSheet(); openServer(x.id); }, "tonal sm")) : undefined,
+    }));
+    const out = h("div", { style: "margin-top:12px" }, h("div", { class: "group" }, rows));
+    if (r.servers.some((x) => x.password)) out.append(h("p", { class: "muted small" }, "Save the passwords now; they are not shown again (also sent to the bot chat)."));
+    else if (r.keys) out.append(h("p", { class: "muted small" }, "The account's SSH keys were installed."));
+    if (r.panel) out.append(h("p", {}, `🧩 Node setup started; the bot adds it to panel ${r.panel} when ready and tells you (5-10 min).`));
+    return out;
+  }
+  if (j.kind === "ip" && j.ok) {
+    const out = h("div", { style: "margin-top:12px" }, h("div", { class: "group" },
+      item({ lead: tile("globe", "green"), title: r.new_ip, sub: `was ${r.old_ip}` + (r.kept ? " (kept)" : ""), right: copyBtn(r.new_ip, "Copy IP") })));
+    out.append(h("p", { class: "muted small" }, "Update DNS records and anything else that used the old address."));
+    return out;
+  }
+  return h("p", {}, r.text || (j.ok ? "Done" : "Failed"));
+}
+
+// ------------------------------------------------------------------ create
+async function renderCreate(keep) {
+  if (!keep || !S.create) {
+    const want = S.cloneFrom ? S.cloneFrom.account : S.create && S.create.account;
+    const opts = await load("/api/create/options" + (want ? "?account=" + encodeURIComponent(want) : ""));
+    S.create = Object.assign({ category: "cx", plan: null, location: null, alert: false, locs: [], image: null, ipv6: false, count: 1, name: "", panel: "", snap: null, ipv4: "" },
+                             S.create || {}, { opts, account: opts.account });
+    const from = S.cloneFrom && opts.snapshots.find((x) => x.id === S.cloneFrom.id);
+    if (from) Object.assign(S.create, { snap: from.id, image: String(from.id), category: from.arch === "arm" ? "cax" : "cx", plan: null });
+    S.cloneFrom = null;
+  }
+  const C = S.create, O = C.opts;
+  const snap = C.snap ? O.snapshots.find((x) => x.id === C.snap) : null;
+  const fits = (p) => !snap || (p.arch === snap.arch && p.disk >= snap.disk);
+  const plan = O.plans.find((p) => p.name === C.plan);
+  setTitle("New server", plan ? plan.name : "Pick a plan");
+  const kids = [];
+  if (O.accounts.length > 1) {
+    const acc = h("select", {}, O.accounts.map((a) => h("option", { value: a }, a)));
+    acc.value = C.account;
+    acc.addEventListener("change", () => { C.account = acc.value; C.plan = null; renderCreate(); });
+    kids.push(section("Account", pad(acc)));
+  }
+  if (snap) kids.push(section("", item({ lead: tile("clone", "purple"), title: "From snapshot " + snap.description,
+    sub: `${snap.disk} GB disk · ${snap.arch}: plans too small for it are dimmed`,
+    right: btn("Use an OS", () => { C.snap = null; C.image = null; renderCreate(true); }, "plain sm") })));
+  kids.push(h("div", { class: "chips scroll" }, O.categories.map((c) =>
+    h("button", { class: "chip" + (C.category === c.id ? " on" : ""), onclick: () => { C.category = c.id; C.plan = null; renderCreate(true); } }, c.label))));
+
+  kids.push(section("Plan", O.plans.filter((p) => p.category === C.category).map((p) => {
+    const where = p.in_stock.length ? p.in_stock : p.offered;
+    const prices = where.map((l) => p.prices[l]).filter((x) => x);
+    const low = prices.length ? Math.min(...prices) : null, high = prices.length ? Math.max(...prices) : null;
+    const ok = fits(p);
+    return item({
+      cls: ok ? "" : "plan dim",
+      lead: h("span", { class: "radio" + (C.plan === p.name ? " on" : "") }),
+      title: [p.name, " ", p.stock_known ? (p.in_stock.length ? h("span", { class: "pill green" }, `${p.in_stock.length} in stock`) : h("span", { class: "pill red" }, "sold out")) : "",
+        " ", !ok && h("span", { class: "pill" }, "too small")],
+      sub: `${p.cores} vCPU · ${num(p.memory)} GB · ${p.disk} GB`,
+      right: low === null ? "" : (high - low > 0.005 ? "from " : "") + eur(low),
+      onclick: ok ? () => { C.plan = p.name; C.location = null; C.locs = []; C.alert = !p.in_stock.length; C.image = snap ? String(snap.id) : null; C.ipv4 = ""; renderCreate(true); } : null,
+    });
+  })));
+
+  if (plan) {
+    const soldOut = plan.offered.filter((l) => !plan.in_stock.includes(l));
+    const locKids = [];
+    if (soldOut.length || C.alert) locKids.push(pad(seg([["now", "Create now"], ["alert", "🔔 When in stock"]], C.alert ? "alert" : "now", (v) => {
+      if (v === "now" && !plan.in_stock.length) return;
+      C.alert = v === "alert"; C.locs = []; renderCreate(true);
+    })));
+    const lc = h("div", { class: "chips" });
+    for (const l of O.locations.filter((l) => plan.offered.includes(l.name))) {
+      const inStock = plan.in_stock.includes(l.name);
+      const price = plan.prices[l.name];
+      if (C.alert) {
+        const idx = C.locs.indexOf(l.name);
+        lc.append(h("button", { class: "chip" + (idx >= 0 ? " on" : ""), onclick: () => { idx >= 0 ? C.locs.splice(idx, 1) : C.locs.push(l.name); renderCreate(true); } },
+          (idx >= 0 ? `${idx + 1}. ` : "") + `${l.flag} ${l.city}` + (inStock ? " ✓" : "")));
+      } else {
+        lc.append(h("button", { class: "chip" + (C.location === l.name ? " on" : ""), disabled: !inStock,
+          onclick: () => { C.location = l.name; C.ipv4 = ""; renderCreate(true); } }, `${l.flag} ${l.city}` + (price ? ` · ${eur(price)}` : "") + (inStock ? "" : " · sold out")));
+      }
+    }
+    locKids.push(pad(lc));
+    kids.push(section(C.alert ? "Locations, in order of preference" : "Location", locKids));
+
+    const images = O.images.filter((i) => i.arch === plan.arch);
+    const snaps = O.snapshots.filter((x) => x.arch === plan.arch && x.disk <= plan.disk);
+    if (!C.image || !(images.some((i) => i.name === C.image) || snaps.some((x) => String(x.id) === C.image))) {
+      C.image = (images.find((i) => i.name === "ubuntu-24.04") || images.find((i) => i.name.startsWith("ubuntu")) || images[0] || {}).name;
+      C.snap = null;
+    }
+    const img = h("select", {}, images.map((i) => h("option", { value: i.name }, i.description)),
+      snaps.length ? h("optgroup", { label: "Your snapshots" }, snaps.map((x) => h("option", { value: String(x.id) }, "📸 " + x.description))) : "");
+    img.value = C.image || "";
+    img.addEventListener("change", () => { C.image = img.value; C.snap = /^\d+$/.test(C.image) ? Number(C.image) : null; if (!C.image.startsWith("ubuntu")) C.panel = ""; renderCreate(true); });
+    const name = h("input", { type: "text", value: C.name, placeholder: (C.snap && snap ? `${(snap.server_name || "server").toLowerCase().replace(/[^a-z0-9-]+/g, "-")}-clone-${O.default_name}` : `${plan.name}-${C.location || (C.locs[0] || "loc")}-${O.default_name}`) + " (auto)", autocapitalize: "off" });
+    name.addEventListener("input", () => { C.name = name.value; });
+    const opts = [pad(h("label", { class: "f" }, "Image"), img),
+      item({ title: "IPv6", sub: "Public IPv6 network", right: switchEl(C.ipv6, (v) => { C.ipv6 = v; }) })];
+    if (!C.alert) opts.push(pad(h("label", { class: "f" }, "Count"),
+      seg([1, 2, 3, 5, 10].filter((n) => n <= O.max_count).map((n) => [n, String(n)]), C.count, (v) => { C.count = v; renderCreate(true); })));
+    opts.push(pad(h("label", { class: "f" }, C.count > 1 && !C.alert ? "Base name (-1, -2 … are added; empty = auto)" : "Name (empty = auto)"), name));
+    const kept = !C.alert && C.count === 1 && C.location ? O.kept_ips.filter((p) => p.location === C.location) : [];
+    if (!kept.some((p) => String(p.id) === String(C.ipv4))) C.ipv4 = "";
+    if (kept.length) {
+      const ipSel = h("select", {}, h("option", { value: "" }, "A new IPv4"), kept.map((p) => h("option", { value: p.id }, `Kept ${p.ip}`)));
+      ipSel.value = String(C.ipv4 || "");
+      ipSel.addEventListener("change", () => { C.ipv4 = ipSel.value; });
+      opts.push(pad(h("label", { class: "f" }, "IPv4 (a kept IP in this location can be used)"), ipSel));
+    }
+    if (!C.alert && O.panels.length && (C.image || "").startsWith("ubuntu"))
+      opts.push(pad(h("label", { class: "f" }, "🧩 Set up as a PasarGuard node"),
+        seg([["", "No"], ...O.panels.map((p) => [p, p])], C.panel, (v) => { C.panel = v; renderCreate(true); })));
+    kids.push(section("Options", opts));
+
+    if (C.alert) {
+      kids.push(section("", pad(btn([icon("bell"), "Set create alert"], submitAlert, "block", { disabled: !C.locs.length })),
+        { foot: "The bot checks every 2 minutes and creates the server in the first location with room, then tells you. Nothing is billed until then." }));
+    } else {
+      const price = C.location ? plan.prices[C.location] : null;
+      kids.push(section("", [
+        price ? item({ title: "Monthly cost", sub: C.count > 1 ? `${C.count} × ${eur(price)}` : "", right: h("b", {}, eur(price * C.count)) }) : "",
+        pad(btn(C.panel ? `🧩 Create node for ${C.panel}` : "Create server", submitCreate, "block", { disabled: !C.location || !C.image }))],
+        { foot: O.ssh_keys ? `The account's ${plural(O.ssh_keys, "SSH key")} will be installed.` : "No SSH key in the account: the root password is shown after creating." }));
+    }
+  }
+  setView(...kids);
+}
+
+async function submitCreate() {
+  const C = S.create;
+  if (!(await confirmBox(`Create ${C.count > 1 ? C.count + " × " : ""}${C.plan} in ${C.location}?`))) return;
+  try {
+    const j = await api("POST", "/api/create", { account: C.account, plan: C.plan, location: C.location, image: C.image,
+      ipv6: C.ipv6, count: C.count, name: C.name.trim() || null, panel: C.panel || null, ipv4_id: C.count === 1 && C.ipv4 ? Number(C.ipv4) : null });
+    C.name = ""; C.ipv4 = ""; showJob(j.id);
+  } catch (e) { fail(e); }
+}
+
+async function submitAlert() {
+  const C = S.create;
+  try {
+    await api("POST", "/api/create/alert", { account: C.account, plan: C.plan, locations: C.locs, image: C.image, ipv6: C.ipv6, name: C.name.trim() || null });
+    haptic("success"); toast("Create alert saved"); C.plan = null; go("alerts");
+  } catch (e) { fail(e); }
+}
+
+// ------------------------------------------------------------------ alerts
+async function renderAlerts() {
+  const a = await load("/api/alerts");
+  setTitle("Alerts", `Checked every ${a.interval} minutes`);
+  const multi = a.schedules.some((y) => y.account !== (a.schedules[0] || {}).account);
+  const kids = [];
+  if (a.paused) kids.push(section("", item({ lead: tile("pause", "orange"), title: a.paused, sub: "Nothing here acts until they are resumed",
+    right: btn("Resume", () => act(() => api("POST", "/api/automation", { resume: true }), "Automations resumed"), "tonal sm") })));
+  kids.push(autoResetSection(a.auto_reset));
+  kids.push(section("Traffic reset schedules", a.schedules.length ? a.schedules.map((x) => item({
+    lead: tile("clock", "orange"), title: `${x.name} · ${describe(x)}`, sub: "Next: " + when(x.next_run) + (multi ? " · " + x.account : ""),
+    onclick: () => openServer(x.server_id), right: btn("Delete", (e) => { e.stopPropagation(); delSchedule(x.id); }, "danger-tonal sm"),
+  })) : emptyItem("None yet. Add one on a server's page."), { foot: "Iran time." }));
+  kids.push(section("Switch plan when in stock", a.watches.length ? a.watches.map((w) => watchItem(w, true))
+    : emptyItem("None. Tap 🔔 on a plan in Change plan.")));
+  kids.push(section("Create when in stock", a.creates.length ? a.creates.map((c) => item({
+    lead: tile("plus", "blue"), title: `${c.plan} · ${c.locations.join(" → ")}`,
+    sub: `${c.image} · IPv6 ${c.ipv6 ? "on" : "off"} · ${c.name || "auto name"} · ${c.account}` + (c.failures ? ` · ${plural(c.failures, "refusal")}` : ""),
+    right: btn("Cancel", async () => {
+      if (!(await confirmBox("Cancel this create alert?"))) return;
+      act(() => api("DELETE", "/api/create-alert/" + c.id), "Cancelled");
+    }, "plain sm"),
+  })) : emptyItem("None. In New server, pick a sold-out plan and choose 🔔 When in stock.")));
+  setView(...kids);
+}
+
+function autoResetSection(ar) {
+  const save = (body, msg) => act(() => api("POST", "/api/auto-reset", body), msg);
+  const hour = h("select", {}, [...Array(24).keys()].map((x) => h("option", { value: x }, String(x).padStart(2, "0"))));
+  const minute = h("select", {}, ar.minutes.map((x) => h("option", { value: x }, ":" + String(x).padStart(2, "0"))));
+  hour.value = String(ar.hour); minute.value = String(ar.minute);
+  const onTime = () => save({ hour: hour.value, minute: minute.value }, "Time saved");
+  hour.addEventListener("change", onTime); minute.addEventListener("change", onTime);
+  const rows = [
+    item({ lead: tile("moon", "purple"), title: "Auto reset",
+      sub: ar.enabled ? `Every night at ${ar.time} (Iran) · next ${ar.next_text}` : "Off",
+      right: switchEl(ar.enabled, (on) => save({ enabled: on }, on ? "Auto reset on" : "Auto reset off")) }),
+    pad(h("div", { class: "row" }, h("div", { class: "small muted grow", style: "font-weight:600" }, "Time (Iran)"),
+        h("div", { style: "width:78px" }, hour), h("div", { style: "width:78px" }, minute)),
+      h("div", { class: "small muted", style: "font-weight:600" }, "Reset at"),
+      seg(ar.thresholds.map((t) => [t, t + "%"]), ar.threshold, (t) => save({ threshold: t }, `Threshold ${t}%`))),
+  ];
+  for (const x of ar.servers) rows.push(item({
+    lead: h("span", { class: "dot " + x.status }), title: x.name,
+    sub: [pct(x.fraction) + " used" + (x.own_time ? ` · at ${x.time}` : "") + (x.status !== "running" ? " · powered off, skipped" : ""), barEl(x.fraction)],
+    right: switchEl(x.included, (on) => act(() => api("POST", `/api/server/${x.id}/auto-reset`, { on }), on ? `${x.name}: on` : `${x.name}: off`)),
+  }));
+  return section("Auto reset", rows, { foot: `Each night the bot resets every running server that is switched on here and has used ${ar.threshold}% or more, or would pass 100% before the next night at the pace of the last 24 h. One after another; each is off for a few minutes, twice. The chat gets a message when it starts and the results.` });
+}
+
+// ------------------------------------------------------------------ health + running
+async function renderHealth() {
+  const d = await load("/api/health");
+  const bad = d.accounts.filter((a) => a.status !== "ok").length;
+  setTitle("Health", bad ? `${plural(bad, "account")} with a problem` : "All accounts answer");
+  const kids = [section("Hetzner accounts", d.accounts.map((a) => item({
+    lead: tile("shield", a.status === "ok" ? "green" : a.status === "auth" || a.status === "forbidden" ? "red" : "orange"),
+    title: a.name, sub: a.label + (a.message ? " · " + a.message : "") + (a.since ? " · since " + a.since : ""),
+    right: a.status === "ok" && a.rate_remaining !== null ? `${num(a.rate_remaining)} / ${num(a.rate_limit || 3600)}` : "",
+  })), { foot: "Requests left this hour, as Hetzner's last answer said." })];
+
+  const pauseRows = [];
+  if (d.paused) pauseRows.push(item({ lead: tile("pause", "orange"), title: d.pause_text, sub: "Skipped runs are reported in the chat",
+    right: btn([icon("play"), "Resume"], () => act(() => api("POST", "/api/automation", { resume: true }), "Automations resumed"), "sm") }));
+  else pauseRows.push(item({ lead: tile("play", "green"), title: "Automations run", sub: d.what }));
+  pauseRows.push(pad(h("div", { class: "small muted", style: "font-weight:600" }, d.paused ? "Pause again for" : "Pause everything for"),
+    seg([...d.pause_hours.map((x) => [x, x + " h"]), [0, "Until resumed"]], null, async (x) => {
+      if (!(await confirmBox(`Pause every automation ${x ? "for " + x + " h" : "until you resume them"}? Your own buttons keep working.`))) return;
+      act(() => api("POST", "/api/automation", { pause_hours: x }), "Automations paused");
+    })));
+  kids.push(section("Automations", pauseRows, { foot: "A kill switch for when Hetzner seems touchy: alerts stay saved and act once resumed; a reset already running finishes." }));
+
+  const r = d.report;
+  const hour = h("select", {}, [...Array(24).keys()].map((x) => h("option", { value: x }, String(x).padStart(2, "0"))));
+  const minute = h("select", {}, r.minutes.map((x) => h("option", { value: x }, ":" + String(x).padStart(2, "0"))));
+  hour.value = String(r.hour); minute.value = String(r.minute);
+  const onTime = () => act(() => api("POST", "/api/health/report", { hour: hour.value, minute: minute.value }), "Time saved");
+  hour.addEventListener("change", onTime); minute.addEventListener("change", onTime);
+  kids.push(section("Daily check", [
+    item({ lead: tile("pulse", "blue"), title: "Daily check in the chat", sub: r.enabled ? `At ${r.time} (Iran) · next ${r.next_text}` : "Off",
+      right: switchEl(r.enabled, (on) => act(() => api("POST", "/api/health/report", { enabled: on }), on ? "Daily check on" : "Daily check off")) }),
+    pad(h("div", { class: "row" }, h("div", { class: "small muted grow", style: "font-weight:600" }, "Time (Iran)"),
+      h("div", { style: "width:78px" }, hour), h("div", { style: "width:78px" }, minute)),
+      btn("Send it now", () => act(() => api("POST", "/api/health/report/send"), "Sent to the chat"), "tonal block")),
+  ], { foot: "Per account: access, servers running or off, near the traffic limit, locked, failed actions; last night's auto reset; the pause." }));
+
+  if (d.locked.length) kids.push(section("Locked now", d.locked.map((x) => item({ lead: tile("lock", "red"), title: x.name,
+    sub: `since ${x.since} · ${x.account}`, onclick: () => openServer(x.server_id), chevron: true }))));
+  kids.push(section("Failed actions, 24 h", d.failed.length ? d.failed.slice(0, 30).map((f) => item({
+    lead: tile("fire", "red"), title: `${f.server}: ${f.label}`, sub: `${f.error || "?"} · ${f.at} · ${f.account}`,
+    onclick: f.server_id ? () => openServer(f.server_id) : null })) : emptyItem("None."),
+    { foot: `Checked every ${d.checks.interval} minutes. Alerts: a token rejected or refused, a server locked ${d.checks.locked_minutes}+ minutes, ${d.checks.failed_count}+ failed actions in an hour.` }));
+  setView(...kids);
+}
+
+async function renderRunning() {
+  const d = await load("/api/running");
+  setTitle("Running now", "Iran time " + iranHM.format(new Date()));
+  const kids = [];
+  kids.push(section("The bot", d.bot.length ? d.bot.map((a) => item({ lead: h("span", { class: "spin" }),
+    title: `${a.name} · ${a.title}`, onclick: () => openServer(a.server_id), chevron: true,
+    sub: [(a.steps && a.step ? `Step ${a.step} of ${a.steps}: ` : "") + a.stage + ` · ${a.minutes} min`, a.steps ? barEl(a.step / a.steps) : ""] }))
+    : emptyItem("No reset, plan change or IP change is running.")));
+  kids.push(section("Hetzner", d.hetzner.length ? d.hetzner.map((a) => item({ lead: tile("clock", "orange"),
+    title: `${a.name} · ${a.label}`, onclick: a.server_id ? () => openServer(a.server_id) : null,
+    sub: [`${a.progress}%` + (a.minutes !== null ? ` · ${a.minutes} min` : "") + ` · ${a.account}`, barEl(a.progress / 100)] }))
+    : emptyItem("No running Hetzner action."), { foot: "Refreshes every few seconds while open." }));
+  setView(...kids);
+  clearTimeout(S.runTimer);
+  S.runTimer = setTimeout(() => { if (S.tab === "running" && document.getElementById("sheet").classList.contains("hidden")) render(); }, 4000);
+}
+
+// ------------------------------------------------------------------ more
+function renderMore() {
+  setTitle("More");
+  setView(section("Account", [
+    item({ lead: tile("wallet", "green"), title: "Costs", sub: "This month: servers, overage, backups, snapshots, volumes, IPs", onclick: () => openPage("cost"), chevron: true }),
+    item({ lead: tile("globe", "teal"), title: "Floating IPs", sub: "Create, delete, attach, ip addr command", onclick: () => openPage("ips:fip"), chevron: true }),
+    item({ lead: tile("pin", "blue"), title: "Primary IPs", sub: "Create, delete", onclick: () => openPage("ips:pip"), chevron: true }),
+    item({ lead: tile("camera", "purple"), title: "Snapshots", sub: "All snapshots, take, delete, new server from one", onclick: () => openPage("snapshots"), chevron: true }),
+    item({ lead: tile("pulse", "red"), title: "Health & safety", sub: "Account checks, pause automations, daily check", onclick: () => openPage("health"), chevron: true }),
+    item({ lead: tile("clock", "orange"), title: "Running now", sub: "The bot's work and Hetzner's actions, with progress", onclick: () => openPage("running"), chevron: true }),
+  ], { foot: "Per-server tools (floating IPs, volumes, rebuild, rename, price, backups, password, delete, add to panel) are under Network and Manage on each server's page. The SSH console is in the bot chat only." }));
+}
+
+// ------------------------------------------------------------------ server: network
+const FIP_HINT = "Run the command on the server itself so it answers on that IP; it lasts until the next reboot.";
+
+async function deleteFip(f, path) {
+  if (!(await confirmBox(`Delete floating IP ${f.ip}?` + (f.server_id ? `\nIt is detached from ${f.server_name || "its server"} first.` : "") + "\nThis cannot be undone."))) return;
+  act(() => api("DELETE", path), "Floating IP deleted");
+}
+
+async function renderNetwork(id) {
+  const n = await load(`/api/server/${id}/network`);
+  setTitle(n.name, "Network · " + n.location);
+  const kids = [section("Addresses", [
+    item({ lead: tile("globe", "teal"), title: n.ip || "No IPv4", sub: "IPv4",
+      right: n.ip ? h("div", { class: "row", style: "gap:6px" }, copyBtn(n.ip), btn([icon("swap"), "Change"], () => changeIpSheet(n), "tonal sm", { disabled: n.busy })) : undefined }),
+    item({ lead: tile("globe", "blue"), title: n.ipv6 || "Off", sub: "IPv6", right: n.ipv6 ? copyBtn(n.ipv6) : undefined }),
+    n.panel && item({ lead: tile("puzzle", "purple"), title: "Node of panel " + n.panel }),
+  ])];
+
+  const mine = n.floating.filter((f) => f.server_id === n.id);
+  const rest = n.floating.filter((f) => f.server_id !== n.id);
+  const fipRows = [...mine, ...rest].map((f) => {
+    const here = f.server_id === n.id;
+    return h("div", { class: "item col" },
+      h("div", { class: "row" },
+        tile("globe", here ? "green" : f.server_id ? "gray" : "teal"),
+        h("div", { class: "grow" }, h("div", { class: "title mono", style: "font-size:14px;font-weight:600;word-break:break-all" }, f.ip),
+          h("div", { class: "sub" }, `${f.flag} ${f.location} · ${f.type} · `, here ? "on this server" : f.server_id ? `on ${f.server_name || "#" + f.server_id}` : "unassigned", ` · ${eur(f.price)}/mo`)),
+        here ? btn([icon("unlink"), "Detach"], async () => {
+                 if (!(await confirmBox(`Detach ${f.ip} from this server?`))) return;
+                 act(() => api("POST", `/api/server/${n.id}/fip`, { fip_id: f.id, action: "unassign" }), "Detached");
+               }, "plain sm")
+             : btn([icon("link"), f.server_id ? "Move here" : "Attach"], async () => {
+                 if (f.server_id && !(await confirmBox(`Move ${f.ip} from ${f.server_name} to ${n.name}?`))) return;
+                 act(() => api("POST", `/api/server/${n.id}/fip`, { fip_id: f.id, action: "assign" }), "Attached; run its command on the server");
+               }, "tonal sm"),
+        h("button", { class: "copy", title: "Delete", style: "background:color-mix(in srgb,var(--danger) 13%,transparent);color:var(--danger)",
+          onclick: () => deleteFip(f, `/api/server/${n.id}/fip/${f.id}`) }, icon("trash"))),
+      here && codeBox(f.command));
+  });
+  const newFip = (type) => async () => {
+    if (!(await confirmBox(`Create a new floating ${type === "ipv4" ? "IPv4" : "IPv6"} in ${n.location} and attach it to ${n.name}? It is billed monthly.`))) return;
+    try {
+      const r = await api("POST", `/api/server/${n.id}/fip/new`, { type });
+      haptic("success");
+      secretSheet("Created and attached: " + r.ip, r.command, "Run this command on the server (lasts until the next reboot).");
+    } catch (e) { fail(e); }
+  };
+  fipRows.push(pad(h("div", { class: "btnrow" }, btn([icon("plus"), "New IPv4"], newFip("ipv4"), "tonal"), btn([icon("plus"), "New IPv6"], newFip("ipv6"), "tonal"))));
+  if (!n.floating.length) fipRows.unshift(emptyItem("No floating IPs in this server's account."));
+  kids.push(section("Floating IPs", fipRows, { foot: mine.length ? FIP_HINT : "New IPs are created in the server's location and attached right away." }));
+
+  const vrows = n.volumes.map((v) => item({
+    lead: tile("disk", v.attached ? "blue" : "gray"),
+    title: `${v.name} · ${gb(v.size)}`,
+    sub: v.attached ? [h("span", { class: "mono", style: "font-size:12px" }, v.device || "?")] : `Free in ${n.location} · ${eur(v.price)}/mo`,
+    right: h("div", { class: "row", style: "gap:6px" },
+      v.attached
+        ? btn("Detach", async () => {
+            if (!(await confirmBox(`Detach volume ${v.name}? Unmount it on the server first.`))) return;
+            act(() => api("POST", `/api/server/${n.id}/volume/${v.id}`, { action: "detach" }), "Detached");
+          }, "plain sm")
+        : btn("Attach", () => act(() => api("POST", `/api/server/${n.id}/volume/${v.id}`, { action: "attach" }), "Attached"), "tonal sm"),
+      h("button", { class: "copy", title: "Delete", style: "background:color-mix(in srgb,var(--danger) 13%,transparent);color:var(--danger)", onclick: async () => {
+        if (!(await confirmBox(`Delete volume ${v.name}? All its data is lost; this cannot be undone.`))) return;
+        act(() => api("DELETE", `/api/server/${n.id}/volume/${v.id}`), "Deleted");
+      } }, icon("trash"))),
+  }));
+  if (!n.volumes.length) vrows.push(emptyItem(`No volumes (free volumes in ${n.location} show here too).`));
+  let size = 10;
+  const sizeIn = h("input", { type: "number", min: n.volume_sizes[0], max: n.volume_sizes[1], value: size, inputmode: "numeric" });
+  const make = btn("", async () => {
+    if (!(await confirmBox(`Create a ${gb(size)} volume and attach it to ${n.name}?`))) return;
+    act(() => api("POST", `/api/server/${n.id}/volume`, { size }), "Created and attached");
+  }, "block");
+  const sizeChips = h("div", { class: "chips" });
+  const label = () => {
+    make.replaceChildren(icon("plus"), `Create ${gb(size)} volume · ${eur(size * n.volume_price)}/mo`);
+    sizeChips.replaceChildren(...[10, 20, 50, 100].map((x) => h("button", { class: "chip" + (x === size ? " on" : ""), onclick: () => { size = x; sizeIn.value = x; label(); } }, gb(x))));
+  };
+  sizeIn.addEventListener("input", () => { size = Number(sizeIn.value) || 0; label(); });
+  label();
+  vrows.push(pad(h("label", { class: "f" }, "New volume (ext4, mounted automatically)"), sizeChips, sizeIn, make));
+  kids.push(section("Volumes", vrows));
+
+  if (n.panels.length) {
+    const panel = h("select", {}, n.panels.map((p) => h("option", { value: p }, p)));
+    const key = h("input", { type: "text", placeholder: "API key (UUID)", autocapitalize: "off", class: "mono" });
+    kids.push(section("Add to panel", pad(h("label", { class: "f" }, "Panel"), panel, h("label", { class: "f" }, "Node API key"), key,
+      btn([icon("puzzle"), "Add node"], async () => {
+        try {
+          await api("POST", `/api/server/${n.id}/node`, { panel: panel.value, api_key: key.value });
+          haptic("success"); toast(`Added to panel ${panel.value}`); render();
+        } catch (e) { fail(e); }
+      }, "block")), { foot: "PasarGuard Node must already run on the server (setup.sh). setup.sh prints the API key at the end; it is also in /opt/pg-node/.env." }));
+  }
+  setView(...kids);
+}
+
+function changeIpSheet(n) {
+  const box = sheet();
+  box.append(h("h3", {}, "Change IPv4"), h("div", { class: "muted small" }, `${n.name} · now ${n.ip}`));
+  const choices = [{ key: "new0", title: "New IP, delete the old one", sub: "The usual choice" },
+    { key: "new1", title: "New IP, keep the old one", sub: `The old one stays as a free primary IP` + (n.ip_price ? ` · ${eur(n.ip_price)}/mo` : "") },
+    ...n.kept_ips.map((p) => ({ key: "pip" + p.id, title: `Use kept ${p.ip}`, sub: "The old one is deleted", id: p.id }))];
+  let pick = "new0";
+  const list = h("div", { class: "group", style: "margin-top:12px" });
+  const draw = () => list.replaceChildren(...choices.map((c) => item({ lead: h("span", { class: "radio" + (c.key === pick ? " on" : "") }), title: c.title, sub: c.sub,
+    onclick: () => { pick = c.key; draw(); } })));
+  draw();
+  box.append(list, h("p", { class: "muted small" }, "The server is powered off for about a minute. DNS records, clients" + (n.panel ? " and the node address in panel " + n.panel : "") + " must be changed to the new address."));
+  box.append(h("div", { style: "display:grid;gap:8px;margin-top:6px" },
+    btn([icon("swap"), "Change IPv4"], async () => {
+      const c = choices.find((x) => x.key === pick);
+      if (!(await confirmBox(`Give ${n.name} another IPv4? It is off for about a minute.`))) return;
+      closeSheet();
+      try {
+        const j = await api("POST", `/api/server/${n.id}/ipv4`, { keep_old: pick === "new1", use_ip: c.id || null });
+        showJob(j.id);
+      } catch (e) { fail(e); }
+    }, "block"),
+    btn("Cancel", closeSheet, "plain block")));
+}
+
+// ------------------------------------------------------------------ server: manage
+function snapItem(x, opts = {}) {
+  return item({
+    lead: tile("camera", x.status === "available" ? "purple" : "gray"),
+    title: [x.protected ? "🔒 " : "", x.description],
+    sub: [`${gb(x.size)} · ${eur(x.price)}/mo · ${isoWhen(x.created)}`, x.status !== "available" ? " · creating…" : "",
+      opts.server && x.server_name ? [" · from ", x.server_exists
+        ? h("span", { class: "link", onclick: (e) => { e.stopPropagation(); openServer(x.server_id); } }, x.server_name)
+        : x.server_name + " (deleted)"] : "",
+      opts.account ? " · " + x.account : ""],
+    right: h("div", { class: "row", style: "gap:6px" },
+      opts.clone && x.status === "available" && btn([icon("clone"), "New server"], () => cloneSnapshot(x), "tonal sm"),
+      btn("Delete", async () => {
+        if (!(await confirmBox(`Delete snapshot "${x.description}"?` + (x.protected ? "\nIts delete protection is removed first." : "") + "\nThis cannot be undone."))) return;
+        act(() => api("DELETE", `/api/snapshot/${encodeURIComponent(x.account)}/${x.id}`), "Deleted");
+      }, "danger-tonal sm")),
+  });
+}
+
+function cloneSnapshot(x) {
+  S.create = null;
+  S.cloneFrom = { id: x.id, account: x.account };
+  go("create");
+}
+
+async function renderManage(id) {
+  const m = await load(`/api/server/${id}/manage`);
+  setTitle(m.name, "Manage · " + m.account);
+  const kids = [];
+  if (m.busy) kids.push(section("", item({ lead: h("span", { class: "spin" }), title: "A reset or plan change is running", sub: "Rebuild and delete wait until it ends." })));
+
+  const name = h("input", { type: "text", value: m.name, autocapitalize: "off" });
+  kids.push(section("Name", pad(h("div", { class: "row" }, h("div", { class: "grow" }, name),
+    btn("Save", () => act(() => api("POST", `/api/server/${id}/rename`, { name: name.value }), "Renamed"), "tonal"))),
+    { foot: "Letters, digits, - and . (1-63 characters)." }));
+
+  const price = h("input", { type: "text", inputmode: "decimal", value: m.price_override ?? "", placeholder: String(m.list_price) });
+  kids.push(section("Price", [
+    item({ lead: tile("euro", "green"), title: m.price_override !== null ? `${eur(m.price_override)} / month (custom)` : `${eur(m.list_price)} / month`, sub: `Hetzner list price ${eur(m.list_price)}` }),
+    pad(h("div", { class: "row" }, h("div", { class: "grow" }, price),
+      btn("Save", () => act(() => api("POST", `/api/server/${id}/price`, { price: price.value.trim() || null }), "Saved"), "tonal"),
+      m.price_override !== null && btn("Use list price", () => act(() => api("POST", `/api/server/${id}/price`, { price: null }), "Back to the list price"), "plain"))),
+  ], { foot: "For an older, cheaper contract the API does not report, so costs add up correctly." }));
+
+  kids.push(section("Security", [
+    item({ lead: tile("shield", "blue"), title: "Automatic backups", sub: `7 daily backups · about ${eur(m.backup_price)}/mo`,
+      right: switchEl(m.backups, async (on, input) => {
+        const q = on ? `Enable backups? About ${eur(m.backup_price)} per month is added.` : "Disable backups? Existing backups are deleted.";
+        if (!(await confirmBox(q))) { input.checked = !on; return; }
+        act(() => api("POST", `/api/server/${id}/backups`, { on }), on ? "Backups enabled" : "Backups disabled");
+      }) }),
+    item({ lead: tile("key", "orange"), title: "Root password", sub: "Needs a running server with qemu-guest-agent",
+      right: btn("Reset", async () => {
+        if (!(await confirmBox(`Reset the root password of ${m.name}?`))) return;
+        try { const r = await api("POST", `/api/server/${id}/password`); haptic("success");
+              secretSheet("New root password", r.password, "Save it now; it was also sent to the bot chat."); }
+        catch (e) { fail(e); }
+      }, "plain sm") }),
+    item({ lead: tile("lock", m.protected ? "green" : "gray"), title: "Protection", sub: m.protected ? "On: Hetzner refuses to delete or rebuild it" : "Off: turn on to block delete and rebuild",
+      right: switchEl(m.protected, (on) => act(() => api("POST", `/api/server/${id}/protection`, { on }), on ? "Protection on" : "Protection off")) }),
+  ]));
+
+  const sl = m.snapshots.map((x) => snapItem(x, { clone: true }));
+  if (!m.snapshots.length) sl.push(emptyItem("No snapshots of this server."));
+  sl.push(pad(btn([icon("camera"), "Take snapshot"], async () => {
+    if (!(await confirmBox(`Take a snapshot of ${m.name}? The server keeps running; it takes a few minutes.`))) return;
+    act(() => api("POST", `/api/server/${id}/snapshot`), "Snapshot started");
+  }, "tonal block")));
+  kids.push(section("Snapshots", sl));
+
+  const img = h("select", {}, m.images.map((i) => h("option", { value: i.name }, i.description)));
+  kids.push(section("Rebuild", pad(img, btn([icon("wrench"), "Rebuild OS"], async () => {
+    if (!(await confirmBox(`🚨 Reinstall ${m.name} with ${img.value}? Everything on the server is erased.`))) return;
+    try { const r = await api("POST", `/api/server/${id}/rebuild`, { image: img.value }); haptic("success");
+          secretSheet("Rebuild started", r.password, r.password ? "New root password; save it now (also in the bot chat)." : "The account's SSH keys were installed; no password was made."); }
+    catch (e) { fail(e); }
+  }, "danger-tonal block", { disabled: m.busy || m.protected })), { foot: m.protected ? "🛡 Protection is on: turn it off above to rebuild." : "🚨 Erases all data and installs the OS from scratch." }));
+
+  const confirmName = h("input", { type: "text", placeholder: m.name, autocapitalize: "off" });
+  let keepIp = false;
+  const del = btn([icon("trash"), "Delete server permanently"], async () => {
+    if (!(await confirmBox(`Delete ${m.name} for good? This cannot be undone.` + (keepIp ? `\n${m.ip} is kept as a free primary IP.` : "")))) return;
+    try {
+      const r = await api("POST", `/api/server/${id}/delete`, { name: confirmName.value.trim(), keep_ip: keepIp });
+      haptic("success"); toast(r.kept_ip ? `Server deleted; ${r.kept_ip} kept` : "Server deleted"); S.servers = null; go("servers");
+    }
+    catch (e) { fail(e); }
+  }, "danger block", { disabled: true });
+  confirmName.addEventListener("input", () => { del.disabled = m.busy || m.protected || confirmName.value.trim() !== m.name; });
+  const dz = [];
+  if (m.protected) dz.push(item({ lead: tile("lock", "green"), title: "Protection is on", sub: "Turn it off under Security to delete this server." }));
+  if (m.ip) dz.push(item({ title: `Keep the IP ${m.ip}`, sub: "It stays as a free primary IP (billed monthly) for a new server in " + m.location,
+    right: switchEl(false, (on) => { keepIp = on; }) }));
+  dz.push(pad(h("div", { class: "small muted" }, "Type the server's name to confirm:"), confirmName, del));
+  kids.push(section("Danger zone", dz));
+  setView(...kids);
+}
+
+// ------------------------------------------------------------------ account-wide: cost
+async function renderCost() {
+  const c = await load("/api/cost");
+  setTitle("Costs", "This month · " + c.month);
+  const multi = c.accounts.length > 1;
+  const kids = [];
+  if (multi) kids.push(h("div", { class: "stats" }, h("div", { class: "stat wide" }, tile("wallet", "green"), h("div", { class: "n" }, eur(c.total)), h("div", { class: "l" }, "All accounts, this month"))));
+  for (const a of c.accounts) {
+    if (a.empty) { kids.push(section(multi ? a.account : "Servers", emptyItem("No servers (or the API did not answer)."))); continue; }
+    kids.push(section(multi ? a.account + " · servers" : "Servers", a.servers.map((r) => item({
+      title: [r.name, " ", h("span", { class: "pill" }, r.plan), r.backups ? " 💾" : ""],
+      sub: `${tb(r.traffic)} / ${num(r.limit_tb)} TB` + (r.overage > 0 ? ` · ⚠️ ${eur(r.overage)} overage` : ""),
+      right: eur(r.price), onclick: () => openServer(r.id), chevron: true,
+    }))));
+    const line = (ic, color, label, value) => item({ lead: tile(ic, color), title: label, right: value });
+    kids.push(section(multi ? a.account + " · summary" : "Summary", [
+      line("server", "blue", `Servers (${a.servers.length})`, eur(a.server_cost)),
+      line("fire", "orange", "Traffic overage", eur(a.overage)),
+      line("shield", "teal", `Backups (${a.backup_count})`, eur(a.backup_cost)),
+      line("camera", "purple", `Snapshots (${a.snapshot_count}, ${gb(a.snapshot_gb)})`, eur(a.snapshot_cost)),
+      line("disk", "gray", `Volumes (${a.volume_count}, ${gb(a.volume_gb)})`, eur(a.volume_cost)),
+      line("globe", "teal", `Floating IPs (${a.floating_count})`, eur(a.floating_cost)),
+      line("pin", "blue", `Primary IPs (${a.primary_assigned} on servers` + (a.primary_unassigned ? `, ${a.primary_unassigned} free` : "") + ")", eur(a.primary_cost)),
+      item({ title: h("b", {}, "Total"), right: h("b", { style: "font-size:17px;color:var(--text)" }, eur(a.total)) }),
+    ], { foot: [a.overage > 0 ? `Projected month-end overage ≈ ${eur(a.projected_overage)}. ` : "", `All-time overage loss ${eur(a.overage_all_time)}.`] }));
+    if (a.history.length > 1) kids.push(section("Previous months", a.history.map(([m, v]) => item({ title: m, right: eur(v) }))));
+  }
+  kids.push(h("div", { class: "section foot muted small", style: "padding:0 4px" }, "Monthly prices incl. VAT (gross); custom server prices are used."));
+  setView(...kids);
+}
+
+// ------------------------------------------------------------------ account-wide: IPs
+async function renderIps(kind) {
+  const d = await load("/api/ips/" + kind);
+  const fip = kind === "fip";
+  const multi = d.accounts.length > 1;
+  const total = d.ips.reduce((x, i) => x + i.price, 0);
+  setTitle(fip ? "Floating IPs" : "Primary IPs", `${plural(d.ips.length, "IP")} · ${eur(total)}/mo`);
+  const kids = [];
+  const F = S.ipForm = Object.assign({ account: d.accounts[0], type: "ipv4", location: (d.locations[0] || {}).name, count: 1 }, S.ipForm || {});
+  if (!d.accounts.includes(F.account)) F.account = d.accounts[0];
+
+  const rows = d.ips.map((ip) => {
+    const top = [tile(fip ? "globe" : "pin", ip.server_id ? "green" : "gray"),
+      h("div", { class: "grow" }, h("div", { class: "title mono", style: "font-size:14px;font-weight:600;word-break:break-all" }, ip.ip),
+        h("div", { class: "sub" }, `${ip.flag} ${ip.location} · ${ip.type}`, multi ? " · " + ip.account : "", " · ",
+          ip.server_id ? h("span", { class: "link", onclick: () => openServer(ip.server_id) }, ip.server_name || "#" + ip.server_id) : "unassigned",
+          ip.price ? ` · ${eur(ip.price)}/mo` : (fip ? "" : " · free on a server"))),
+      copyBtn(ip.ip),
+      h("button", { class: "copy", title: "Delete", style: "background:color-mix(in srgb,var(--danger) 13%,transparent);color:var(--danger)", onclick: async () => {
+        if (fip) return deleteFip(ip, `/api/ips/fip/${encodeURIComponent(ip.account)}/${ip.id}`);
+        if (!(await confirmBox(`Delete ${ip.ip}? This cannot be undone.` + (ip.server_id ? "\nA primary IP on a server cannot be deleted." : "")))) return;
+        act(() => api("DELETE", `/api/ips/${kind}/${encodeURIComponent(ip.account)}/${ip.id}`), "Deleted");
+      } }, icon("trash"))];
+    const kidsCol = [h("div", { class: "row" }, top)];
+    if (fip) {
+      const sel = h("select", {}, h("option", { value: "" }, "Not attached"),
+        d.servers.filter((s) => s.account === ip.account).map((s) => h("option", { value: s.id }, "Attached to " + s.name)));
+      sel.value = ip.server_id || "";
+      sel.addEventListener("change", async () => {
+        const target = sel.value ? d.servers.find((s) => String(s.id) === sel.value) : null;
+        if (!(await confirmBox(target ? `Attach ${ip.ip} to ${target.name}?` : `Detach ${ip.ip} from ${ip.server_name}?`))) { sel.value = ip.server_id || ""; return; }
+        act(() => api("POST", `/api/ips/fip/${encodeURIComponent(ip.account)}/${ip.id}/assign`, { server_id: target ? target.id : null }),
+          target ? "Attached; run its command on the server" : "Detached");
+      });
+      kidsCol.push(sel);
+      if (ip.server_id) kidsCol.push(codeBox(ip.command));
+    }
+    return h("div", { class: "item col" }, kidsCol);
+  });
+  if (!d.ips.length) rows.push(emptyItem("No IPs yet."));
+  kids.push(section(fip ? "Floating IPs" : "Primary IPs", rows, { foot: fip && d.ips.some((i) => i.server_id) ? FIP_HINT : "" }));
+
+  const acc = multi && h("select", {}, d.accounts.map((a) => h("option", { value: a }, a)));
+  if (acc) { acc.value = F.account; acc.addEventListener("change", () => { F.account = acc.value; }); }
+  const loc = h("select", {}, d.locations.map((l) => h("option", { value: l.name }, `${l.flag} ${l.city}`)));
+  loc.value = F.location; loc.addEventListener("change", () => { F.location = loc.value; });
+  kids.push(section("Create", pad(
+    acc ? [h("label", { class: "f" }, "Account"), acc] : "",
+    h("label", { class: "f" }, "Type"), seg([["ipv4", "IPv4"], ["ipv6", "IPv6"]], F.type, (v) => { F.type = v; renderIps(kind); }),
+    h("label", { class: "f" }, "Location"), loc,
+    h("label", { class: "f" }, "Count"), seg([1, 2, 3, 5].filter((n) => n <= d.max_count).map((n) => [n, String(n)]), F.count, (v) => { F.count = v; renderIps(kind); }),
+    h("div", { class: "spacer" }),
+    btn([icon("plus"), "Create"], async () => {
+      if (!(await confirmBox(`Create ${F.count} ${fip ? "floating" : "primary"} ${F.type === "ipv4" ? "IPv4" : "IPv6"} in ${F.location}? Billed monthly.`))) return;
+      try {
+        const r = await api("POST", "/api/ips/" + kind, { account: F.account, type: F.type, location: F.location, count: F.count });
+        haptic(r.ok ? "success" : "warning");
+        const box = sheet();
+        box.append(h("h3", {}, `✅ Created ${r.made.length}` + (r.errors.length ? `, ${r.errors.length} failed` : "")));
+        box.append(h("div", { class: "group", style: "margin-top:12px" }, r.made.map((x) => h("div", { class: "item col" },
+          h("div", { class: "row" }, h("b", { class: "grow mono" }, x.ip), copyBtn(x.ip)), x.command ? codeBox(x.command) : ""))));
+        for (const e of r.errors) box.append(h("p", { class: "muted small" }, "❌ " + e));
+        if (fip) box.append(h("p", { class: "muted small" }, "Attach it to a server, then run its command on that server."));
+        box.append(btn("Done", () => { closeSheet(); render(); }, "plain block", { style: "margin-top:12px" }));
+      } catch (e) { fail(e); }
+    }, "block"))));
+  setView(...kids);
+}
+
+// ------------------------------------------------------------------ account-wide: snapshots
+async function renderSnapshots() {
+  const d = await load("/api/snapshots");
+  const multi = d.accounts.length > 1;
+  const size = d.snapshots.reduce((x, i) => x + i.size, 0), cost = d.snapshots.reduce((x, i) => x + i.price, 0);
+  setTitle("Snapshots", `${plural(d.snapshots.length, "snapshot")} · ${gb(size)} · ${eur(cost)}/mo`);
+  const pick = h("select", {}, d.servers.map((s) => h("option", { value: s.id }, s.name + (multi ? ` (${s.account})` : ""))));
+  const rows = d.snapshots.map((x) => snapItem(x, { server: true, account: multi, clone: true }));
+  if (!d.snapshots.length) rows.push(emptyItem("No snapshots yet."));
+  setView(
+    section("Take a snapshot", pad(pick, btn([icon("camera"), "Take snapshot"], async () => {
+      const s = d.servers.find((x) => String(x.id) === pick.value);
+      if (!s || !(await confirmBox(`Take a snapshot of ${s.name}? The server keeps running.`))) return;
+      act(() => api("POST", `/api/server/${s.id}/snapshot`), "Snapshot started");
+    }, "tonal block", { disabled: !d.servers.length }))),
+    section("All snapshots", rows));
+}
+
+// ------------------------------------------------------------------ start
+if (!tg || !tg.initData) {
+  setTitle("Hetzner Manager");
+  setView(h("div", { class: "group", style: "margin-top:12px" }, emptyItem("Open this page from the Telegram bot (the Panel button).")));
+  document.getElementById("tabs").style.display = "none";
+} else {
+  go("dashboard");
+}
+</script>
+</body>
+</html>

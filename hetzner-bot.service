@@ -1,0 +1,18 @@
+[Unit]
+Description=Hetzner Server Manager Telegram Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# DATA_FILE / overage_history.json are relative paths, so the bot must
+# run from the repo directory. install.sh replaces __DIR__ automatically.
+WorkingDirectory=__DIR__
+# All times shown by the bot use this timezone (change via: hetzner tz)
+Environment=TZ=UTC
+ExecStart=__DIR__/venv/bin/python main.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

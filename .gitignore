@@ -1,0 +1,30 @@
+# secrets
+.env
+
+# runtime data
+server_data.csv
+overage_history*.json
+monitor_state.json
+
+# python
+venv/
+__pycache__/
+*.pyc
+# in-bot update (updater.py, hetzner-bot.sh)
+update_state.json
+.update_prev
+.update_result
+.update_request
+.update.log
+
+# runtime state files
+plan_watches.json
+create_watches.json
+node_setups.json
+reset_schedules.json
+auto_reset.json
+automation.json
+health.json
+price_overrides.json
+*.log
+.pytest_cache/
